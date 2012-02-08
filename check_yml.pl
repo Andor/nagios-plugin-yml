@@ -44,7 +44,7 @@ foreach my $url (@ARGV) {
                 string => $res->content
                 );
             if ($dom->indexElements() < 1) {
-                $np->add_message( CRITICAL, 'Number element in '.$req->uri.' is 0' );
+                $np->add_message( CRITICAL, 'Number elements in '.$req->uri.' is 0' );
             } else {
                 $np->add_message( OK, $req->uri.' OK;' );
             }
