@@ -1,0 +1,55 @@
+#!/usr/bin/perl -w
+
+use Nagios::Plugin;
+use XML::LibXML;
+my $np = Nagios::Plugin->new(
+    usage => 'Usage: %s [--user HTTP USERNAME] [--password HTTP PASSWORD] url [url ..]',
+);
+
+$np->add_arg(
+    spec => 'user|u=s',
+    help => 'Specify HTTP username',
+    );
+$np->add_arg(
+    spec => 'password|p=s',
+    help => 'Specify HTTP password',
+    );
+$np->getopts();
+
+# Create a user agent object
+use LWP::UserAgent;
+my $ua = LWP::UserAgent->new;
+$ua->agent('check yml/0.1');
+
+foreach $url (@ARGV) {
+    # Create a request
+    my $req = HTTP::Request->new( GET => $url );
+    # Autorization
+    $req->authorization_basic( $np->opts->user, $np->opts->password );
+
+    # Handle response
+    my $res = $ua->request($req);
+
+    # Check for not 200 return code
+    if ($res->code != 200) {
+        $np->add_message( CRITICAL, 'requesting '.$req->uri.' failed. Code '.$res->code );
+    } else {
+        if (length($res->content) < 1) {
+            $np->add_message( CRITICAL, $req->uri.' content length is 0' );
+        } else {
+#            print $req->uri."\n";
+            my $dom = XML::LibXML->load_xml(
+                string => $res->content
+                );
+            if ($dom->indexElements() < 1) {
+                $np->add_message( CRITICAL, 'Number element in '.$req->uri.' is 0' );
+            } else {
+                $np->add_message( OK, $req->uri.' OK;' );
+            }
+#            print $dom->indexElements()."\n";
+        }
+    }
+}
+
+my ($code, $message) = $np->check_messages();
+$np->nagios_exit( $code, $message );
