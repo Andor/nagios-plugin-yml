@@ -1,7 +1,10 @@
 #!/usr/bin/perl -w
 
+use strict;
 use Nagios::Plugin;
 use XML::LibXML;
+use LWP::UserAgent;
+
 my $np = Nagios::Plugin->new(
     usage => 'Usage: %s [--user HTTP USERNAME] [--password HTTP PASSWORD] url [url ..]',
 );
@@ -17,11 +20,10 @@ $np->add_arg(
 $np->getopts();
 
 # Create a user agent object
-use LWP::UserAgent;
 my $ua = LWP::UserAgent->new;
 $ua->agent('check yml/0.1');
 
-foreach $url (@ARGV) {
+foreach my $url (@ARGV) {
     # Create a request
     my $req = HTTP::Request->new( GET => $url );
     # Autorization
