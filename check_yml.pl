@@ -21,8 +21,7 @@ $np->getopts();
 
 # Create a user agent object
 my $ua = LWP::UserAgent->new;
-$ua->agent('check yml/0.1');
-
+$ua->agent( 'check yml/0.1' );
 foreach my $url (@ARGV) {
     # Create a request
     my $req = HTTP::Request->new( GET => $url );
@@ -30,28 +29,27 @@ foreach my $url (@ARGV) {
     $req->authorization_basic( $np->opts->user, $np->opts->password );
 
     # Handle response
-    my $res = $ua->request($req);
+    my $res = $ua->request( $req );
 
     # Check for not 200 return code
-    if ($res->code != 200) {
-        $np->add_message( CRITICAL, 'requesting '.$req->uri.' failed. Code '.$res->code );
+    if ( $res->code != 200 ) {
+        $np->add_message( CRITICAL, 'Requesting '.$req->uri.' failed. Code '.$res->code );
     } else {
-        if (length($res->content) < 1) {
-            $np->add_message( CRITICAL, $req->uri.' content length is 0' );
-        } else {
-#            print $req->uri."\n";
+        if ( length( $res->content ) ) {
             my $dom = XML::LibXML->load_xml(
                 string => $res->content
                 );
-            if ($dom->indexElements() < 1) {
-                $np->add_message( CRITICAL, $req->uri.' has no elements' );
-            } else {
+            if ( $dom->indexElements() ) {
                 $np->add_message( OK, $req->uri.' OK;' );
+            } else {
+                $np->add_message( CRITICAL, $req->uri.' has no elements' );
             }
 #            print $dom->indexElements()."\n";
+        } else{
+            $np->add_message( CRITICAL, $req->uri.' content length is 0' );
         }
     }
 }
 
-my ($code, $message) = $np->check_messages();
+my ( $code, $message ) = $np->check_messages();
 $np->nagios_exit( $code, $message );
