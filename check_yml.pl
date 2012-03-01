@@ -9,12 +9,13 @@ use Date::Parse;
 use Date::Format;
 
 my $np = Nagios::Plugin->new(
-    usage => 'Usage: %s [--user HTTP USERNAME] [--password HTTP PASSWORD] [--strict] [--url url] [ url ..]',
+    usage => 'Usage: %s [--user HTTP USERNAME] [--password HTTP PASSWORD] [--max-age SECONDS] [--strict] --url url [ url ..]',
 );
 
 $np->add_arg(
     spec => 'url=s@',
     help => 'Specify URL to check',
+    required => 1,
     );
 $np->add_arg(
     spec => 'user|u=s',
@@ -82,18 +83,21 @@ foreach my $url (@{$np->opts->url}, @ARGV) {
                 verbose "Number of elements: ".$dom->indexElements."\n";
                 
                 if ( $np->opts->get('max-age') ) {
+
+                    # create XPath object
                     $xc->setContextNode( $dom );
                     my @date = $xc->findvalue('/yml_catalog/@date');
 
+                    # check for 0 or more than 1 date parameters
                     if ( $#date != 0 ) {
-                        $np->add_message( CRITICAL, $req->uri.' has '.( $#date + 1 ).' element "yml_catalog" with parameter "date"' );
+                        $np->add_message( CRITICAL, $req->uri.' has '.( $#date + 1 ).' element "yml_catalog" with parameter "date";' );
                     } else {
                         my $date = shift @date;
                         $date = str2time($date);
                         
                         # check date format
                         if (! $date =~ m/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/ ) {
-                            $np->add_message( CRITICAL, $req->uri.' has wrong date format: '.$date );
+                            $np->add_message( CRITICAL, $req->uri.' has wrong date format: '.$date.';' );
                         } else {
 
                             # format pretty date
@@ -103,7 +107,7 @@ foreach my $url (@{$np->opts->url}, @ARGV) {
                             verbose "current time: $now; change time: $date; diff: $diff\n";
 
                             if ( $diff > $np->opts->get('max-age') ) {
-                                $np->add_message( CRITICAL, $req->uri." too old: last update ". $pretty_date );
+                                $np->add_message( CRITICAL, $req->uri." last update ". $pretty_date.';' );
                             } else {
                                 $np->add_message( OK, $req->uri.' OK;' );
                             }
@@ -113,14 +117,14 @@ foreach my $url (@{$np->opts->url}, @ARGV) {
                     $np->add_message( OK, $req->uri.' OK;' );
                 }
             } else {
-                $np->add_message( CRITICAL, $req->uri.' has no elements' );
+                $np->add_message( CRITICAL, $req->uri.' has no elements;' );
             }
             
         } else{
-                $np->add_message( CRITICAL, $req->uri.' content length is 0' );
+                $np->add_message( CRITICAL, $req->uri.' content length is 0;' );
         }
     } else {
-        $np->add_message( CRITICAL, 'Requesting '.$req->uri.' failed. Code '.$res->code );
+        $np->add_message( CRITICAL, 'Requesting '.$req->uri.' failed. Code '.$res->code.';' );
     }
 }
 
