@@ -2,8 +2,11 @@
 
 use strict;
 use Nagios::Plugin;
-use XML::LibXML;
 use LWP::UserAgent;
+use XML::LibXML;
+use XML::LibXML::XPathContext;
+use Date::Parse;
+use Date::Format;
 
 my $np = Nagios::Plugin->new(
     usage => 'Usage: %s [--user HTTP USERNAME] [--password HTTP PASSWORD] [--strict] [--url url] [ url ..]',
@@ -26,16 +29,25 @@ $np->add_arg(
     help => 'Strict check for 200 HTTP responce code',
     default => 1,
     );
+$np->add_arg(
+    spec => 'max-age|a=s',
+    help => 'Check age of yml file',
+    );
 $np->getopts();
 
 sub verbose {
-    my $message = shift;
+    my $message = shift || return 1;
     if ( $np->opts->verbose ) {
         $|++;
         print "$message";
         $|++;
     }    
 }
+my $xc;
+if ($np->opts->get('max-age')) {
+    $xc = XML::LibXML::XPathContext->new();
+}
+my $now = time();
 
 # Create a user agent object
 my $ua = LWP::UserAgent->new;
@@ -69,7 +81,37 @@ foreach my $url (@{$np->opts->url}, @ARGV) {
             if ( $dom->indexElements() ) {
                 verbose "Number of elements: ".$dom->indexElements."\n";
                 
-                $np->add_message( OK, $req->uri.' OK;' );
+                if ( $np->opts->get('max-age') ) {
+                    $xc->setContextNode( $dom );
+                    my @date = $xc->findvalue('/yml_catalog/@date');
+
+                    if ( $#date != 0 ) {
+                        $np->add_message( CRITICAL, $req->uri.' has '.( $#date + 1 ).' element "yml_catalog" with parameter "date"' );
+                    } else {
+                        my $date = shift @date;
+                        $date = str2time($date);
+                        
+                        # check date format
+                        if (! $date =~ m/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/ ) {
+                            $np->add_message( CRITICAL, $req->uri.' has wrong date format: '.$date );
+                        } else {
+
+                            # format pretty date
+                            my $pretty_date = time2str("%d %h %R", $date);
+                            my $diff = $now - $date;
+                            
+                            verbose "current time: $now; change time: $date; diff: $diff\n";
+
+                            if ( $diff > $np->opts->get('max-age') ) {
+                                $np->add_message( CRITICAL, $req->uri." too old: last update ". $pretty_date );
+                            } else {
+                                $np->add_message( OK, $req->uri.' OK;' );
+                            }
+                        }
+                    }
+                } else {
+                    $np->add_message( OK, $req->uri.' OK;' );
+                }
             } else {
                 $np->add_message( CRITICAL, $req->uri.' has no elements' );
             }
