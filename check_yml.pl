@@ -91,31 +91,25 @@ foreach my $url (@{$np->opts->url}, @ARGV) {
                 
                 # Check last offers list update
                 if ( $np->opts->get('max-age') ) {
-                    my @date = $xc->findvalue('/yml_catalog/@date');
-
-                    # check for 0 or more than 1 date parameters
-                    if ( $#date != 0 ) {
-                        $np->add_message( CRITICAL, $req->uri.' has '.( $#date + 1 ).' element "yml_catalog" with parameter "date";' );
+                    my $date = $xc->findvalue('/yml_catalog/@date');
+                    verbose "price date: $date\n";
+                    
+                    # check date format
+                    if (! $date =~ m/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/ ) {
+                        $np->add_message( CRITICAL, $req->uri.' has wrong date format: '.$date.';' );
                     } else {
-                        my $date = shift @date;
                         $date = str2time($date);
+                        # format pretty date
+                        my $pretty_date = time2str("%d %h %R", $date);
+                        my $diff = $now - $date;
                         
-                        # check date format
-                        if (! $date =~ m/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/ ) {
-                            $np->add_message( CRITICAL, $req->uri.' has wrong date format: '.$date.';' );
-                        } else {
-                            # format pretty date
-                            my $pretty_date = time2str("%d %h %R", $date);
-                            my $diff = $now - $date;
-                            
-                            verbose "current time: $now; change time: $date; diff: $diff\n";
-
-                            if ( $diff > $np->opts->get('max-age') ) {
-                                $np->add_message( CRITICAL, $req->uri." last update ". $pretty_date.';' );
+                        verbose "current time: $now; change time: $date; diff: $diff\n";
+                        
+                        if ( $diff > $np->opts->get('max-age') ) {
+                            $np->add_message( CRITICAL, $req->uri." last update ". $pretty_date.';' );
                             } else {
                                 $np->add_message( OK, $req->uri.' OK;' );
                             }
-                        }
                     }
 
                 } else {
