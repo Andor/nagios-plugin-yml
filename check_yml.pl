@@ -124,7 +124,7 @@ foreach my $url (@{$np->opts->url}, @ARGV) {
                     if ( $offers_count > 0 ) {
                         $np->add_message( OK, $offers_count.' offers;' );
                     } else {
-                        $np->add_message( CRITICAL, $offers_count.' offers;' );
+                        $np->add_message( CRITICAL, $req->uri.' has '.$offers_count.' offers;' );
                     }
                 }
 
