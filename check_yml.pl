@@ -107,9 +107,9 @@ foreach my $url (@{$np->opts->url}, @ARGV) {
                         
                         if ( $diff > $np->opts->get('max-age') ) {
                             $np->add_message( CRITICAL, $req->uri." last update ". $pretty_date.';' );
-                            } else {
-                                $np->add_message( OK, $req->uri.' OK;' );
-                            }
+                        } else {
+                            $np->add_message( OK, $req->uri.' OK;' );
+                        }
                     }
 
                 } else {
