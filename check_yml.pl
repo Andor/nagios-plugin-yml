@@ -34,6 +34,11 @@ $np->add_arg(
     spec => 'max-age|a=s',
     help => 'Check age of yml file',
     );
+$np->add_arg(
+    spec => 'offers|o',
+    help => 'Check for count of offers in yml',
+    default => 1,
+    );
 $np->getopts();
 
 sub verbose {
@@ -44,10 +49,9 @@ sub verbose {
         $|++;
     }    
 }
-my $xc;
-if ($np->opts->get('max-age')) {
-    $xc = XML::LibXML::XPathContext->new();
-}
+
+my $xc = XML::LibXML::XPathContext->new();
+
 my $now = time();
 
 # Create a user agent object
@@ -82,10 +86,11 @@ foreach my $url (@{$np->opts->url}, @ARGV) {
             if ( $dom->indexElements() ) {
                 verbose "Number of elements: ".$dom->indexElements."\n";
                 
+                # create XPath object
+                $xc->setContextNode( $dom );
+                
+                # Check last offers list update
                 if ( $np->opts->get('max-age') ) {
-
-                    # create XPath object
-                    $xc->setContextNode( $dom );
                     my @date = $xc->findvalue('/yml_catalog/@date');
 
                     # check for 0 or more than 1 date parameters
@@ -99,7 +104,6 @@ foreach my $url (@{$np->opts->url}, @ARGV) {
                         if (! $date =~ m/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/ ) {
                             $np->add_message( CRITICAL, $req->uri.' has wrong date format: '.$date.';' );
                         } else {
-
                             # format pretty date
                             my $pretty_date = time2str("%d %h %R", $date);
                             my $diff = $now - $date;
@@ -113,11 +117,25 @@ foreach my $url (@{$np->opts->url}, @ARGV) {
                             }
                         }
                     }
+
                 } else {
-                    $np->add_message( OK, $req->uri.' OK;' );
+                    $np->add_message( OK, $req->uri.': GET OK;' );
                 }
+
+                # Check count of offers
+                if ( $np->opts->get('offers') ) {
+                    my $offers_count = $xc->findvalue('count(/yml_catalog/shop/offers/offer)');
+                    verbose "Number of offers: ".$offers_count."\n";
+                    
+                    if ( $offers_count > 0 ) {
+                        $np->add_message( OK, $offers_count.' offers;' );
+                    } else {
+                        $np->add_message( CRITICAL, $offers_count.' offers;' );
+                    }
+                }
+
             } else {
-                $np->add_message( CRITICAL, $req->uri.' has no elements;' );
+                $np->add_message( CRITICAL, $req->uri.' has no XML elements;' );
             }
             
         } else{
