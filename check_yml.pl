@@ -9,7 +9,7 @@ use Date::Parse;
 use Date::Format;
 
 my $np = Nagios::Plugin->new(
-    usage => 'Usage: %s [--user HTTP USERNAME] [--password HTTP PASSWORD] [--max-age SECONDS] [--strict] --url url [ url ..]',
+    usage => 'Usage: %s [--user HTTP USERNAME] [--password HTTP PASSWORD] [--max-age SECONDS] [--strict] [--offers] --url url [ url ..]',
 );
 
 $np->add_arg(
