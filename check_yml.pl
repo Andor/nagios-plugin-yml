@@ -46,7 +46,7 @@ sub verbose {
     if ( $np->opts->verbose ) {
         $|++;
         print "$message";
-        $|++;
+        $|--;
     }    
 }
 
